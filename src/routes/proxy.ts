@@ -6,13 +6,14 @@ import { createProxyMiddleware, Options } from 'http-proxy-middleware';
  *
  * Route Map:
  *   /api/ai/*    →  AI Service   (http://localhost:5000)
- *   /api/*       →  Backend Svc  (http://localhost:4000)
+ *   /api/*       →  Backend Svc  (http://localhost:8001)
  *
- * The order matters — /api/ai must be registered BEFORE the catch-all /api
- * so that AI requests are intercepted first.
+ * IMPORTANT: We use `pathFilter` instead of `app.use('/api', ...)` because
+ * Express strips the mount path prefix, which breaks downstream routing.
+ * Using pathFilter at root keeps the full path intact.
  */
 export function setupProxyRoutes(app: Express): void {
-  const BACKEND_SERVICE_URL = process.env.BACKEND_SERVICE_URL || 'http://localhost:4000';
+  const BACKEND_SERVICE_URL = process.env.BACKEND_SERVICE_URL || 'http://localhost:8001';
   const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5000';
 
   // ─────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ export function setupProxyRoutes(app: Express): void {
   const aiProxyOptions: Options = {
     target: AI_SERVICE_URL,
     changeOrigin: true,
-    pathRewrite: undefined, // Keep path as-is: /api/ai/chat → /api/ai/chat
+    pathFilter: '/api/ai',
     on: {
       proxyReq: (_proxyReq, req) => {
         console.log(`[gateway] → AI Service: ${req.method} ${req.url}`);
@@ -39,17 +40,17 @@ export function setupProxyRoutes(app: Express): void {
     },
   };
 
-  app.use('/api/ai', createProxyMiddleware(aiProxyOptions));
+  app.use(createProxyMiddleware(aiProxyOptions));
 
   // ─────────────────────────────────────────────────────────────
   //  2. /api/* → Backend Service (catch-all)
-  //     Handles: cases, drafts, users, library, documents
-  //     Example: GET /api/cases  →  BACKEND_SERVICE_URL/api/cases
+  //     Handles: auth, cases, drafts, users, library, documents
+  //     Example: POST /api/auth/register → BACKEND_SERVICE_URL/api/auth/register
   // ─────────────────────────────────────────────────────────────
   const backendProxyOptions: Options = {
     target: BACKEND_SERVICE_URL,
     changeOrigin: true,
-    pathRewrite: undefined, // Keep path as-is: /api/cases → /api/cases
+    pathFilter: '/api',
     on: {
       proxyReq: (_proxyReq, req) => {
         console.log(`[gateway] → Backend Service: ${req.method} ${req.url}`);
@@ -65,5 +66,15 @@ export function setupProxyRoutes(app: Express): void {
     },
   };
 
-  app.use('/api', createProxyMiddleware(backendProxyOptions));
+  app.use(createProxyMiddleware(backendProxyOptions));
+
+  // ─────────────────────────────────────────────────────────────
+  //  3. /uploads/* → Backend Service (static files)
+  //     Handles: avatars, uploaded documents
+  // ─────────────────────────────────────────────────────────────
+  app.use(createProxyMiddleware({
+    target: BACKEND_SERVICE_URL,
+    changeOrigin: true,
+    pathFilter: '/uploads',
+  }));
 }

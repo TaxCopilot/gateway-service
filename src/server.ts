@@ -11,39 +11,61 @@ import { rateLimiter } from './middleware/rateLimiter';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8000;
 
-// --- Middleware ---
+// ─── CORS Configuration ───
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim());
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS: Origin ${origin} not allowed`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+  })
+);
+
+// ─── Middleware ───
 app.use(helmet());
-app.use(cors());
 app.use(morgan('dev'));
 app.use(rateLimiter);
 
-// --- Gateway Health Check ---
+// ─── Gateway Health Check ───
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'gateway-service',
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
     upstreams: {
-      backend: process.env.BACKEND_SERVICE_URL || 'http://localhost:4000',
+      backend: process.env.BACKEND_SERVICE_URL || 'http://localhost:8001',
       ai: process.env.AI_SERVICE_URL || 'http://localhost:5000',
     },
   });
 });
 
-// --- Proxy Routes ---
+// ─── Proxy Routes ───
 setupProxyRoutes(app);
 
-// --- Fallback Error Handling ---
+// ─── Fallback Error Handling ───
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// --- Start Server ---
+// ─── Start Server ───
 app.listen(PORT, () => {
-  console.log(`[gateway-service] Running on port ${PORT}`);
-  console.log(`[gateway-service] Proxying /api/ai/* -> ${process.env.AI_SERVICE_URL || 'http://localhost:5000'}`);
-  console.log(`[gateway-service] Proxying /api/*    -> ${process.env.BACKEND_SERVICE_URL || 'http://localhost:4000'}`);
+  console.log(`\n  🚀 gateway-service running on http://localhost:${PORT}`);
+  console.log(`  📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`  🔗 CORS origins: ${allowedOrigins.join(', ')}`);
+  console.log(`  ➜  /api/ai/*  →  ${process.env.AI_SERVICE_URL || 'http://localhost:5000'}`);
+  console.log(`  ➜  /api/*     →  ${process.env.BACKEND_SERVICE_URL || 'http://localhost:8001'}\n`);
 });
 
 export default app;

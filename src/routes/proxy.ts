@@ -19,12 +19,13 @@ export function setupProxyRoutes(app: Express): void {
   // ─────────────────────────────────────────────────────────────
   //  1. /api/ai/* → AI Service
   //     Handles: chat, analysis, drafting, suggestions
-  //     Example: POST /api/ai/chat  →  AI_SERVICE_URL/api/ai/chat
+  //     Example: POST /api/ai/v1/decode-notice → AI_SERVICE_URL/api/v1/decode-notice
   // ─────────────────────────────────────────────────────────────
   const aiProxyOptions: Options = {
     target: AI_SERVICE_URL,
     changeOrigin: true,
     pathFilter: '/api/ai',
+    pathRewrite: { '^/api/ai': '/api' },
     on: {
       proxyReq: (_proxyReq, req) => {
         console.log(`[gateway] → AI Service: ${req.method} ${req.url}`);

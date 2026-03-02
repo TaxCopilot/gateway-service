@@ -46,7 +46,7 @@ app.get('/health', (_req, res) => {
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
     upstreams: {
-      backend: process.env.BACKEND_SERVICE_URL || 'http://localhost:8001',
+      backend: process.env.BACKEND_SERVICE_URL || 'http://localhost:8002',
       ai: process.env.AI_SERVICE_URL || 'http://localhost:5000',
     },
   });
@@ -65,7 +65,7 @@ app.listen(PORT, () => {
   console.log(`  📦 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`  🔗 CORS origins: ${allowedOrigins.join(', ')}`);
   console.log(`  ➜  /api/ai/*  →  ${process.env.AI_SERVICE_URL || 'http://localhost:5000'}`);
-  console.log(`  ➜  /api/*     →  ${process.env.BACKEND_SERVICE_URL || 'http://localhost:8001'}\n`);
+  console.log(`  ➜  /api/*     →  ${process.env.BACKEND_SERVICE_URL || 'http://localhost:8002'}\n`);
 });
 
 export default app;

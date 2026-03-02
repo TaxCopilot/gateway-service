@@ -6,14 +6,14 @@ import { createProxyMiddleware, Options } from 'http-proxy-middleware';
  *
  * Route Map:
  *   /api/ai/*    →  AI Service   (http://localhost:5000)
- *   /api/*       →  Backend Svc  (http://localhost:8001)
+ *   /api/*       →  Backend Svc  (http://localhost:8002)
  *
  * IMPORTANT: We use `pathFilter` instead of `app.use('/api', ...)` because
  * Express strips the mount path prefix, which breaks downstream routing.
  * Using pathFilter at root keeps the full path intact.
  */
 export function setupProxyRoutes(app: Express): void {
-  const BACKEND_SERVICE_URL = process.env.BACKEND_SERVICE_URL || 'http://localhost:8001';
+  const BACKEND_SERVICE_URL = process.env.BACKEND_SERVICE_URL || 'http://localhost:8002';
   const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5000';
 
   // ─────────────────────────────────────────────────────────────

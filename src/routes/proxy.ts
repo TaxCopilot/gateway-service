@@ -21,13 +21,19 @@ export function setupProxyRoutes(app: Express): void {
   //     Handles: chat, analysis, drafting, suggestions
   //     Example: POST /api/ai/v1/decode-notice → AI_SERVICE_URL/api/v1/decode-notice
   // ─────────────────────────────────────────────────────────────
+  const AI_API_KEY = process.env.AI_SERVICE_API_KEY || '';
+
   const aiProxyOptions: Options = {
     target: AI_SERVICE_URL,
     changeOrigin: true,
     pathFilter: '/api/ai',
     pathRewrite: { '^/api/ai': '/api' },
     on: {
-      proxyReq: (_proxyReq, req) => {
+      proxyReq: (proxyReq, req) => {
+        // Inject AI service API key so the AI service can authenticate gateway calls
+        if (AI_API_KEY) {
+          proxyReq.setHeader('X-API-Key', AI_API_KEY);
+        }
         console.log(`[gateway] → AI Service: ${req.method} ${req.url}`);
       },
       error: (err, _req, res) => {

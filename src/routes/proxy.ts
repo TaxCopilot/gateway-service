@@ -36,6 +36,18 @@ export function setupProxyRoutes(app: Express): void {
         }
         console.log(`[gateway] → AI Service: ${req.method} ${req.url}`);
       },
+      proxyRes: (proxyRes) => {
+        // Strip CORS headers from the AI service response so they don't
+        // conflict with the gateway's own CORSMiddleware. The AI service
+        // sets Access-Control-Allow-Origin: * which breaks when the
+        // browser sends credentials (withCredentials: true).
+        const headerNames = Object.keys(proxyRes.headers);
+        for (const name of headerNames) {
+          if (name.toLowerCase().startsWith('access-control-')) {
+            delete proxyRes.headers[name];
+          }
+        }
+      },
       error: (err, _req, res) => {
         console.error(`[gateway] AI Service proxy error:`, err.message);
         (res as any).status(502).json({
